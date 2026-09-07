@@ -75,10 +75,10 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
   <h1>Estimated net proceeds</h1>
   <p class="addr" id="addr">41 Elizabeth Ct, Secaucus, NJ</p>
 
-  <p class="lead" id="lead">At <b>$750,000</b> you would walk away with about <b>$711,525</b>.</p>
+  <p class="lead" id="lead">At <b>$750,000</b> your estimated proceeds before mortgage payoff are about <b>$711,525</b>.</p>
   <p class="hint">Tap a price or type your own. Everything below updates.</p>
   <fieldset>
-    <legend id="chipsLabel">Suggested list prices</legend>
+    <legend id="chipsLabel">Sale-price scenarios</legend>
     <div class="chips" id="chips" role="radiogroup" aria-labelledby="chipsLabel"></div>
   </fieldset>
   <label for="priceInput">Sale price</label>
@@ -93,7 +93,7 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
       <tfoot>
         <tr class="sub"><td>Total after costs</td><td id="afterCosts">$0</td></tr>
         <tr class="sub" id="mortgageRow" hidden><td>Mortgage payoff</td><td id="mortgageOut">$0</td></tr>
-        <tr class="net"><td>You walk away with</td><td id="net" aria-live="polite">$0</td></tr>
+        <tr class="net"><td id="netLabel">Proceeds before mortgage payoff</td><td id="net" aria-live="polite">$0</td></tr>
       </tfoot>
     </table>
     <p class="p" id="costMeans"></p>
@@ -117,7 +117,7 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
       <div><label for="rate">My compensation</label><div class="field"><input id="rate" inputmode="decimal" value="4"><span>%</span></div></div>
       <div><label for="attorney">Attorney fee</label><div class="field"><span aria-hidden="true">$</span><input id="attorney" inputmode="numeric" value="1,500"></div></div>
       <div><label for="smoke">Smoke and CO certificate</label><div class="field"><span aria-hidden="true">$</span><input id="smoke" inputmode="numeric" value="200"></div></div>
-      <div><label for="mortgage">Mortgage payoff</label><div class="field"><span aria-hidden="true">$</span><input id="mortgage" inputmode="numeric" value="0"></div></div>
+      <div><label for="mortgage">Mortgage payoff (0 if unknown)</label><div class="field"><span aria-hidden="true">$</span><input id="mortgage" inputmode="numeric" value="0"></div></div>
       <div class="full"><label for="misc">Other costs</label><div class="field"><span aria-hidden="true">$</span><input id="misc" inputmode="numeric" value="0"></div></div>
       <label class="toggle full"><input type="checkbox" id="senior"> <span>Reduced transfer fee: the home is an owner-occupied one- or two-family residence and the seller is 62 or older, legally blind, or disabled.</span></label>
       <div class="full"><p class="edited" id="edited" hidden>Assumptions changed from the defaults.</p><button type="button" class="reset" id="reset">Reset to defaults</button></div>
@@ -144,13 +144,10 @@ const GRADUATED=[[1000000,0],[2000000,0.01],[2500000,0.02],[3000000,0.025],[3500
 function bracketFee(price,schedule){let fee=0,lower=0;for(const [upper,rate] of schedule){const top=upper===null?price:Math.min(price,upper);if(top>lower)fee+=(top-lower)/500*rate;if(upper!==null)lower=upper;if(upper!==null&&price<=upper)break;}return Math.round(fee);}
 function rtf(price,partial){if(partial)return bracketFee(price,price<=350000?PART_LOW:PART_HIGH);return bracketFee(price,price<=350000?STD_LOW:STD_HIGH);}
 function graduatedFee(price){for(const [upper,pct] of GRADUATED){if(upper===null||price<=upper)return Math.round(price*pct);}return 0;}
-function verdict(actives,uc){if(!uc)return{months:null,label:"not enough data"};const m=actives/uc;return{months:m,label:m<3?"extreme seller's market":m<4?"neutral market":m<5?"leaning buyer's market":"buyer's market"};}
+function verdict(actives,uc){if(!uc)return{ratio:null,label:"not enough data"};return{ratio:actives/uc,label:"active-to-pending ratio"};}
 const MEANING={
- "extreme seller's market":"Buyers outnumber homes. Fewer than three months of inventory means a well-priced listing draws competing offers in its first two weeks.",
- "neutral market":"Supply and demand are balanced. Homes priced at the market still sell in the first few weeks; overpriced ones sit.",
- "leaning buyer's market":"Buyers have a little more choice than usual. Price at the market from day one and expect some negotiation.",
- "buyer's market":"More homes than buyers. Price sharp from day one and expect negotiation; the first two weeks still bring the most attention.",
- "not enough data":"Too few recent contracts to read the market from this number alone. We price off the closest recent sales instead."};
+ "active-to-pending ratio":"This compares current inventory with homes already under contract. It is a point-in-time ratio, not months of supply.",
+ "not enough data":"No current contracts are available for this point-in-time comparison. We price off the closest recent sales instead."};
 const DEFAULTS={rate:"4",attorney:"1,500",smoke:"200",mortgage:"0",misc:"0",senior:false};
 const $=id=>document.getElementById(id);
 const money=n=>"$"+Math.round(n).toLocaleString("en-US");
@@ -164,21 +161,24 @@ const addr=q.get("addr")||"";
 let prices=(q.get("p")||"").split(",").map(s=>parseInt(s,10)).filter(n=>n>0);
 if(!prices.length)prices=[750000,775000,800000];
 prices.sort((a,b)=>a-b);
-const qr=parseFloat(q.get("rate"));if(!isNaN(qr)&&qr>0&&qr<20)DEFAULTS.rate=String(qr);
+/* rate is a percent (4 = 4%). A fraction such as 0.04 is treated as 4. */
+let qr=parseFloat(q.get("rate"));if(!isNaN(qr)&&qr>0&&qr<1)qr=Math.round(qr*100000)/1000;if(!isNaN(qr)&&qr>0&&qr<20)DEFAULTS.rate=String(qr);
+/* A price is labeled recommended only when the link carries rec=<price>, set after Michael approves it. */
+const REC=parseInt(q.get("rec")||"",10);
 const qm=parseInt(q.get("mortgage"),10);if(!isNaN(qm)&&qm>0)DEFAULTS.mortgage=qm.toLocaleString("en-US");
 if(q.get("senior")==="1")DEFAULTS.senior=true;
 $("addr").textContent=addr;
 if(prices.length<2)$("rangeSection").hidden=true;
 let current=prices[0];
 function applyDefaults(){$("rate").value=DEFAULTS.rate;$("attorney").value=DEFAULTS.attorney;$("smoke").value=DEFAULTS.smoke;$("mortgage").value=DEFAULTS.mortgage;$("misc").value=DEFAULTS.misc;$("senior").checked=DEFAULTS.senior;}
-function renderChips(){$("chips").innerHTML="";prices.forEach((p,i)=>{const b=document.createElement("button");b.className="chip";b.type="button";b.setAttribute("role","radio");b.innerHTML=money(p)+(i===0&&prices.length>1?"<small>recommended</small>":"");b.setAttribute("aria-checked",String(p===current));b.onclick=()=>{current=p;$("priceInput").value=p.toLocaleString("en-US");recalc();};$("chips").appendChild(b);});}
+function renderChips(){$("chips").innerHTML="";prices.forEach((p,i)=>{const b=document.createElement("button");b.className="chip";b.type="button";b.setAttribute("role","radio");b.innerHTML=money(p)+(p===REC?"<small>recommended</small>":"");b.setAttribute("aria-checked",String(p===current));b.onclick=()=>{current=p;$("priceInput").value=p.toLocaleString("en-US");recalc();};$("chips").appendChild(b);});}
 function isEdited(){return $("rate").value!==DEFAULTS.rate||num($("attorney"))!==num({value:DEFAULTS.attorney})||num($("smoke"))!==num({value:DEFAULTS.smoke})||num($("mortgage"))!==num({value:DEFAULTS.mortgage})||num($("misc"))!==0||$("senior").checked!==DEFAULTS.senior;}
 function recalc(){
   const price=num($("priceInput")); current=price;
   [...document.querySelectorAll(".chip")].forEach(b=>b.setAttribute("aria-checked",String(prices.includes(price)&&b.textContent.startsWith(money(price)))));
   const bad=price<1000;
   $("priceError").hidden=!bad; $("costs").hidden=bad;
-  if(bad){$("priceError").textContent="Enter a sale price to see your net.";$("lead").innerHTML="Enter a sale price to see what you would walk away with.";return;}
+  if(bad){$("priceError").textContent="Enter a sale price to see your net.";$("lead").innerHTML="Enter a sale price to see your estimated proceeds.";return;}
   const rate=num($("rate"))/100, senior=$("senior").checked;
   const fee=rtf(price,senior), grad=graduatedFee(price), comp=Math.round(price*rate);
   const attorney=num($("attorney")), smoke=num($("smoke")), misc=num($("misc")), mortgage=num($("mortgage"));
@@ -191,14 +191,15 @@ function recalc(){
   $("afterCosts").textContent=money(after);
   $("mortgageRow").hidden=!(mortgage>0); $("mortgageOut").textContent=money(mortgage);
   $("net").textContent=money(net);
-  $("lead").innerHTML=`At <b>${money(price)}</b> you would walk away with about <b>${money(net)}</b>.`;
+  $("netLabel").textContent=mortgage>0?"You walk away with":"Proceeds before mortgage payoff";
+  $("lead").innerHTML=mortgage>0?`At <b>${money(price)}</b> you would walk away with about <b>${money(net)}</b>.`:`At <b>${money(price)}</b> your estimated proceeds before mortgage payoff are about <b>${money(net)}</b>. Add your payoff under Assumptions to see the net.`;
   $("costMeans").innerHTML=`Selling costs come to about <b>${money(costs)}</b>, ${pct(costs/price)} of the price. The fee and the state charges are set by the price, so the sale price is what moves your net.`;
   const ed=isEdited(); $("edited").hidden=!ed; $("assumptionsNote").textContent=ed?"Changed from the defaults":"My compensation, attorney, certificate, mortgage payoff, reduced transfer fee";
 }
 const act=parseInt(q.get("act")||"",10), uc=parseInt(q.get("uc")||"",10);
 if(!isNaN(act)&&!isNaN(uc)){const v=verdict(act,uc);const where=[q.get("town")||"",q.get("type")||"homes"].filter(Boolean).join(" ");
   $("verdict").textContent=v.label;
-  $("marketLine").innerHTML=`${where}: <b>${act}</b> for sale, <b>${uc}</b> under contract${v.months===null?"":`, about <b>${v.months.toFixed(1)} months</b> of inventory at the current pace`}.`;
+  $("marketLine").innerHTML=`${where}: <b>${act}</b> for sale, <b>${uc}</b> under contract${v.ratio===null?"":`, an active-to-pending ratio of <b>${v.ratio.toFixed(1)} to 1</b>`}.`;
   $("marketMeans").innerHTML=`<b>What this means for you:</b> ${MEANING[v.label]}`; $("market").hidden=false;}
 applyDefaults(); renderChips(); $("priceInput").value=current.toLocaleString("en-US");
 $("chips").addEventListener("keydown",e=>{const c=[...document.querySelectorAll(".chip")];const i=c.indexOf(document.activeElement);if(i<0)return;let j=null;if(e.key==="ArrowRight"||e.key==="ArrowDown")j=(i+1)%c.length;if(e.key==="ArrowLeft"||e.key==="ArrowUp")j=(i-1+c.length)%c.length;if(j!==null){e.preventDefault();c[j].focus();c[j].click();}});
