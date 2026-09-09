@@ -92,7 +92,7 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
       <thead><tr><th scope="col">Item</th><th scope="col">Amount</th></tr></thead>
       <tbody id="rows"></tbody>
       <tfoot>
-        <tr class="sub"><td>Total after costs</td><td id="afterCosts">$0</td></tr>
+        <tr class="sub" id="afterRow" hidden><td>Total after costs</td><td id="afterCosts">$0</td></tr>
         <tr class="sub" id="mortgageRow" hidden><td>Mortgage payoff</td><td id="mortgageOut">$0</td></tr>
         <tr class="net"><td id="netLabel">Proceeds before mortgage payoff</td><td id="net" aria-live="polite">$0</td></tr>
       </tfoot>
@@ -180,7 +180,7 @@ function recalc(){
  if(misc)rows.push(['Other costs','',misc]);
  const costs=rows.reduce((n,r)=>n+cents(r[2]),0),after=(cents(price)-costs)/100,net=(cents(after)-(mortgage===null?0:cents(mortgage)))/100;
  $('rows').innerHTML=rows.map(([k,s,v])=>`<tr><td>${k}${s?`<small>${s}</small>`:''}</td><td>${money(v)}</td></tr>`).join('');
- $('afterCosts').textContent=money(after);$('mortgageRow').hidden=mortgage===null;$('mortgageOut').textContent=money(mortgage||0);
+ $('afterCosts').textContent=money(after);$('mortgageRow').hidden=mortgage===null;$('afterRow').hidden=mortgage===null;$('mortgageOut').textContent=money(mortgage||0);
  $('net').textContent=money(net);$('netLabel').textContent=mortgage===null?'Proceeds before mortgage payoff':'Estimated proceeds after entered payoff';
  $('lead').textContent='At '+money(price)+', estimated proceeds '+(mortgage===null?'before mortgage payoff':'after the entered payoff')+' are '+money(net)+'.';
  $('costMeans').textContent='Estimated selling costs: '+money(costs/100)+'. Change the assumptions below to try your own figures.';
