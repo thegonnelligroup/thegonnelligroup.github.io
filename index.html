@@ -25,7 +25,9 @@ legend,label{display:block;font-size:13px;color:var(--muted);font-weight:600;mar
 .chip{position:relative;border:1px solid var(--rule);background:var(--field);color:var(--ink);border-radius:8px;padding:12px 6px;font:inherit;font-weight:600;font-size:15px;cursor:pointer;min-height:48px;text-align:center;transition:background .15s,color .15s,border-color .15s}
 .chip[aria-checked="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
 .chip small{display:block;font-size:13px;font-weight:600;opacity:.75;margin-top:1px}
-.chip:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.chip:focus-visible,summary:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.field input:focus,.field input:focus-visible{outline:none;box-shadow:none}
+.field:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(0,14,53,.10)}
 .field{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;background:var(--field);padding:0 12px;min-height:48px}
 .field span{color:var(--muted);font-size:15px}
 .field input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:17px;font-weight:600;color:var(--ink);padding:10px 0}
