@@ -86,6 +86,8 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
   <div class="field big"><span aria-hidden="true">$</span><input id="priceInput" inputmode="decimal" autocomplete="off" aria-describedby="priceError"></div>
   <p class="p" id="priceError" role="alert" hidden style="color:var(--ink)"></p>
 
+  <label class="toggle" style="margin-top:22px"><input type="checkbox" id="senior"> <span>Reduced transfer fee: I am 62 or older, legally blind or disabled, and this is my owner-occupied one- or two-family home. Confirm eligibility with your attorney.</span></label>
+
   <section id="costs">
     <h2>Where the rest goes</h2>
     <table>
@@ -108,14 +110,13 @@ footer p{margin:0 0 6px}footer a{color:var(--ink)}
   </section>
 
   <details id="assumptions">
-    <summary><span><h2>Assumptions</h2><small id="assumptionsNote">My compensation, attorney, certificate, mortgage payoff, reduced transfer fee</small></span></summary>
+    <summary><span><h2>Assumptions</h2><small id="assumptionsNote">My compensation, attorney, certificate, mortgage payoff</small></span></summary>
     <div class="grid">
       <div><label for="rate">My compensation</label><div class="field"><input id="rate" inputmode="decimal" value="4"><span>%</span></div></div>
       <div><label for="attorney">Attorney fee</label><div class="field"><span aria-hidden="true">$</span><input id="attorney" inputmode="numeric" value="1,500"></div></div>
       <div><label for="smoke">Smoke and CO certificate</label><div class="field"><span aria-hidden="true">$</span><input id="smoke" inputmode="numeric" value="200"></div></div>
       <div><label for="mortgage">Mortgage payoff (leave blank if unknown)</label><div class="field"><span aria-hidden="true">$</span><input id="mortgage" inputmode="decimal" value=""></div></div>
       <div class="full"><label for="misc">Other costs</label><div class="field"><span aria-hidden="true">$</span><input id="misc" inputmode="numeric" value="0"></div></div>
-      <label class="toggle full"><input type="checkbox" id="senior"> <span>Reduced transfer fee eligibility confirmed with your attorney. Age, disability, residency and ownership conditions apply.</span></label>
       <div class="full"><p class="edited" id="edited" hidden>Assumptions changed from the defaults.</p><button type="button" class="reset" id="reset">Reset to defaults</button></div>
     </div>
   </details>
